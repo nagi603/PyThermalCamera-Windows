@@ -8,12 +8,12 @@ from enums.ColormapEnum import Colormap
 from controllers.guiController import GuiController
 
 class ThermalCameraController:
-    def __init__(self, 
-                 deviceIndex: int = VIDEO_DEVICE_INDEX, 
-                 width: int = SENSOR_WIDTH, 
-                 height: int = SENSOR_HEIGHT, 
-                 fps: int = DEVICE_FPS, 
-                 deviceName: str = DEVICE_NAME, 
+    def __init__(self,
+                 deviceIndex: int = VIDEO_DEVICE_INDEX,
+                 width: int = SENSOR_WIDTH,
+                 height: int = SENSOR_HEIGHT,
+                 fps: int = DEVICE_FPS,
+                 deviceName: str = DEVICE_NAME,
                  mediaOutputPath: str = MEDIA_OUTPUT_PATH):
         # Parameters init
         self._deviceIndex: int = deviceIndex
@@ -32,23 +32,23 @@ class ThermalCameraController:
         self._mrow: int = 0
         self._lcol: int = 0
         self._lrow: int = 0
-        
+
         # Media/recording init
         self._isRecording = RECORDING
         self._mediaOutputPath: str = mediaOutputPath
-        
+
         if not os.path.exists(self._mediaOutputPath):
             os.makedirs(self._mediaOutputPath)
-        
+
         # GUI Init
         self._guiController = GuiController(
             width=self._width,
             height=self._height)
-        
+
         # OpenCV init
         self._cap = None
         self._videoOut = None
-    
+
     @staticmethod
     def printBindings():
         """
@@ -65,7 +65,7 @@ class ThermalCameraController:
         print(f'{KEY_CYCLE_THROUGH_COLORMAPS} : Cycle through ColorMaps')
         print(f'{KEY_INVERT} : Invert ColorMap')
         print(f'{KEY_TOGGLE_HUD} : Toggle HUD')
- 
+
     @staticmethod
     def printCredits():
         """
@@ -75,7 +75,7 @@ class ThermalCameraController:
         print('https://youtube.com/leslaboratory')
         print('Fork Author: Riley Meyerkorth 17 January 2025')
         print('A Python program to read, parse and display thermal data from the Topdon TC001 and TS001 Thermal cameras!\n')
-    
+
     def _checkForKeyPress(self, keyPress: int, img):
         """
         Checks and acts on key presses.
@@ -152,14 +152,14 @@ class ThermalCameraController:
                 self._guiController.colormap = Colormap(self._guiController.colormap.value + 1)
         if keyPress == ord(KEY_INVERT): # Cycle through color maps
             self._guiController.isInverted = not self._guiController.isInverted
-            
-        
+
+
         ### RECORDING/MEDIA CONTROLS
         if keyPress == ord(KEY_RECORD) and self._isRecording == False: # Start reording
             self._videoOut = self._record()
             self._isRecording = RECORDING
             self._guiController.recordingStartTime = time.time()
-            
+
         if keyPress == ord(KEY_STOP): # Stop reording
             self._isRecording = not RECORDING
             self._guiController.recordingDuration = RECORDING_DURATION
@@ -179,13 +179,13 @@ class ThermalCameraController:
             self._fps,
             (self._guiController.scaledWidth, self._guiController.scaledHeight))
         return self._videoOut
-    
+
     def _snapshot(self, img):
         """
         Takes a snapshot of the current frame.
         """
         #I would put colons in here, but it Win throws a fit if you try and open them!
-        currentTimeStr = time.strftime("%Y%m%d-%H%M%S") 
+        currentTimeStr = time.strftime("%Y%m%d-%H%M%S")
         self._guiController.last_snapshot_time = time.strftime("%H:%M:%S")
         cv2.imwrite(f"{self._mediaOutputPath}/{self._deviceName}-{currentTimeStr}.png", img)
         return self._guiController.last_snapshot_time
@@ -206,51 +206,30 @@ class ThermalCameraController:
 
     def calculateRawTemperature(self, thdata):
         """
-        Calculates the raw temperature of the frame.
+        Calculates the raw temperature of the center of the frame.
         """
-        hi = int(thdata[96][128][0])
-        lo = int(thdata[96][128][1])
-        lo = lo * 256
-        return hi+lo
+        return thdata[self._height // 2][self._width // 2]
 
     def calculateAverageTemperature(self, thdata):
         """
         Calculates the average temperature of the frame.
         """
-        loavg = int(thdata[...,1].mean())
-        hiavg = int(thdata[...,0].mean())
-        loavg = loavg * 256
-        return round(self.normalizeTemperature(loavg+hiavg), TEMPERATURE_SIG_DIGITS)
+        return round(self.normalizeTemperature(thdata.mean()), TEMPERATURE_SIG_DIGITS)
 
     def calculateMinimumTemperature(self, thdata):
         """
         Calculates the minimum temperature of the frame.
         """
-        # Find the min temperature in the frame
-        lomin = int(thdata[...,1].min())
-        posmin = int(thdata[...,1].argmin())
-        
-        # Since argmax returns a linear index, convert back to row and col
-        self._lcol, self._lrow = divmod(posmin, self._width)
-        himin = int(thdata[self._lcol][self._lrow][0])
-        lomin = lomin * 256
-        
-        return round(self.normalizeTemperature(himin+lomin), TEMPERATURE_SIG_DIGITS)
+        self._lcol, self._lrow = np.unravel_index(np.argmin(thdata), thdata.shape)
+        return round(self.normalizeTemperature(thdata[self._lcol][self._lrow]), TEMPERATURE_SIG_DIGITS)
 
     def calculateMaximumTemperature(self, thdata):
         """
         Calculates the maximum temperature of the frame.
         """
         # Find the max temperature in the frame
-        lomax = int(thdata[...,1].max())
-        posmax = int(thdata[...,1].argmax())
-
-        # Since argmax returns a linear index, convert back to row and col
-        self._mcol, self._mrow = divmod(posmax, self._width)
-        himax = int(thdata[self._mcol][self._mrow][0])
-        lomax = lomax * 256
-        
-        return round(self.normalizeTemperature(himax+lomax), TEMPERATURE_SIG_DIGITS)
+        self._mcol, self._mrow = np.unravel_index(np.argmax(thdata), thdata.shape)
+        return round(self.normalizeTemperature(thdata[self._mcol][self._mrow]), TEMPERATURE_SIG_DIGITS)
 
     def run(self):
         """
@@ -260,35 +239,43 @@ class ThermalCameraController:
         self._cap = cv2.VideoCapture(self._deviceIndex)
 
         """
-        MAJOR CHANGE: Do NOT convert to RGB. For some reason, this breaks the frame temperature data on TS001.
-        Originally, it was the opposite: https://stackoverflow.com/questions/63108721/opencv-setting-videocap-property-to-cap-prop-convert-rgb-generates-weird-boolean
+        disable automatic YUY2 -> RGB conversion in OpenCV
         """
-        #cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
+        self._cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)
 
         # Start main runtime loop
         while(self._cap.isOpened()):
             ret, frame = self._cap.read()
             if ret == True:
                 # Split frame into two parts: image data and thermal data
-                imdata, thdata = np.array_split(frame, 2)
-                
+                # We use frame[0] since on Windows this is returned as a 2D array with size [1][<number of pixels>]
+                # Other OS are untested
+                imdata, thdata = np.array_split(frame[0], 2)
+
+                # First convert the image to YUV
+                yuv_pic = np.frombuffer(imdata, dtype=np.uint8).reshape((self._height, self._width, 2))
+                # Next convert to RGB
+                rgb_pic = cv2.cvtColor(yuv_pic, cv2.COLOR_YUV2RGB_YUY2)
+                # Assemble the thermal data
+                thm_pic = np.frombuffer(thdata, dtype=np.uint16).reshape((self._height, self._width))
+
                 # Now parse the data from the bottom frame and convert to temp!
                 # Grab data from the center pixel...
-                self._rawTemp = self.calculateRawTemperature(thdata)
-                self._temp = self.calculateTemperature(thdata)
+                self._rawTemp = self.calculateRawTemperature(thm_pic)
+                self._temp = self.calculateTemperature(thm_pic)
 
                 # Calculate minimum temperature
-                self._minTemp = self.calculateMinimumTemperature(thdata)
-                
+                self._minTemp = self.calculateMinimumTemperature(thm_pic)
+
                 # Calculate maximum temperature
-                self._maxTemp = self.calculateMaximumTemperature(thdata)
+                self._maxTemp = self.calculateMaximumTemperature(thm_pic)
 
                 # Find the average temperature in the frame
-                self._avgTemp = self.calculateAverageTemperature(thdata)
-                
+                self._avgTemp = self.calculateAverageTemperature(thm_pic)
+
                 # Draw GUI elements
                 heatmap = self._guiController.drawGUI(
-                    imdata=imdata,
+                    imdata=rgb_pic,
                     temp=self._temp,
                     maxTemp=self._maxTemp,
                     minTemp=self._minTemp,
@@ -302,7 +289,7 @@ class ThermalCameraController:
                 # Check for recording
                 if self._isRecording == True:
                     self._videoOut.write(heatmap)
-                    
+
                 # Check for quit and other inputs
                 keyPress = cv2.waitKey(1)
                 if keyPress == ord(KEY_QUIT):
@@ -312,6 +299,6 @@ class ThermalCameraController:
                     return
 
                 self._checkForKeyPress(keyPress=keyPress, img=heatmap)
-                
+
                 # Display image
                 cv2.imshow(self._guiController.windowTitle, heatmap)
