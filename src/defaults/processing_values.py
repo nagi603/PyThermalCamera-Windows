@@ -1,6 +1,6 @@
 from enums.ColormapEnum import Colormap
 
-### IMAGE PROCESSING CONSTANTS
+# IMAGE PROCESSING CONSTANTS
 COLORMAP: Colormap = Colormap.NONE
 # Contrast
 CONTRAST: float = 1.0

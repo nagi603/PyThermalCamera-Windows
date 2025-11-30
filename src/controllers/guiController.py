@@ -4,100 +4,101 @@ import cv2
 from defaults.values import *
 from enums.ColormapEnum import Colormap
 
+
 class GuiController:
-    def __init__(self, 
-                 windowTitle: str = WINDOW_TITLE, 
-                 width: int = SENSOR_WIDTH, 
-                 height: int = SENSOR_HEIGHT, 
-                 scale: int = SCALE, 
-                 colormap: Colormap = COLORMAP, 
-                 contrast: float = CONTRAST, 
-                 blurRadius: int = BLUR_RADIUS, 
+    def __init__(self,
+                 window_title: str = WINDOW_TITLE,
+                 width: int = SENSOR_WIDTH,
+                 height: int = SENSOR_HEIGHT,
+                 scale: int = SCALE,
+                 colormap: Colormap = COLORMAP,
+                 contrast: float = CONTRAST,
+                 blur_radius: int = BLUR_RADIUS,
                  threshold: int = THRESHOLD):
         # Passed parameters
-        self.windowTitle = windowTitle
+        self.window_title = window_title
         self.width = width
         self.height = height
         self.scale = scale
         self.colormap = colormap
         self.contrast = contrast
-        self.blurRadius = blurRadius
+        self.blur_radius = blur_radius
         self.threshold = threshold
         
         # Calculated properties
-        self.scaledWidth = int(self.width*self.scale)
-        self.scaledHeight = int(self.height*self.scale)
+        self.scaled_width = int(self.width * self.scale)
+        self.scaled_height = int(self.height * self.scale)
         
         # States
-        self.isHudVisible: bool = HUD_VISIBLE
-        self.isFullscreen: bool = FULLSCREEN
-        self.isInverted: bool = False
+        self.is_hud_visible: bool = HUD_VISIBLE
+        self.is_fullscreen: bool = FULLSCREEN
+        self.is_inverted: bool = False
         
         # Recording stats
-        self.recordingStartTime: float = RECORDING_START_TIME
+        self.recording_start_time: float = RECORDING_START_TIME
         self.last_snapshot_time: str = LAST_SNAPSHOT_TIME
-        self.recordingDuration: str = RECORDING_DURATION
+        self.recording_duration: str = RECORDING_DURATION
         
         # Other
         self._font = FONT
         
         # Initialize the GUI
-        cv2.namedWindow(self.windowTitle, cv2.WINDOW_GUI_NORMAL)
-        cv2.resizeWindow(self.windowTitle, self.scaledWidth, self.scaledHeight)
+        cv2.namedWindow(self.window_title, cv2.WINDOW_GUI_NORMAL)
+        cv2.resizeWindow(self.window_title, self.scaled_width, self.scaled_height)
         
-    def updateRecordingStats(self):
+    def update_recording_stats(self):
         """
         Updates the recording stats.
         """
-        self.recordingDuration = (time.time() - self.recordingStartTime)
-        self.recordingDuration = time.strftime("%H:%M:%S", time.gmtime(self.recordingDuration)) 
+        self.recording_duration = (time.time() - self.recording_start_time)
+        self.recording_duration = time.strftime("%H:%M:%S", time.gmtime(self.recording_duration))
         
-    def drawGUI(self, imdata, temp, averageTemp, maxTemp, minTemp, isRecording, mrow, mcol, lrow, lcol):
+    def draw_gui(self, imdata, temp, average_temp, max_temp, min_temp, is_recording, mrow, mcol, lrow, lcol):
         """
         Draws the GUI elements on the thermal image.
         """
         # Apply affects
-        img = self.applyEffects(imdata=imdata)
+        img = self.apply_effects(imdata=imdata)
         
         # Apply inversion
-        if self.isInverted == True:
+        if self.is_inverted:
             img = cv2.bitwise_not(img)
 
         # Apply colormap
-        img = self.applyColormap(img)
+        img = self.apply_colormap(img)
 
         # Draw crosshairs
-        img = self.drawCrosshairs(img)
+        img = self.draw_crosshairs(img)
         
         # Draw temp
-        img = self.drawTemp(img, temp)
+        img = self.draw_temp(img, temp)
 
         # Draw HUD
-        if self.isHudVisible == True:
-            img = self.drawHUD(img, averageTemp, isRecording)
+        if self.is_hud_visible:
+            img = self.draw_hud(img, average_temp, is_recording)
         
         # Display floating max temp
-        if maxTemp > averageTemp + self.threshold:
-            img = self.drawMaxTemp(img, mrow, mcol, maxTemp)
+        if max_temp > average_temp + self.threshold:
+            img = self.draw_max_temp(img, mrow, mcol, max_temp)
 
         # Display floating min temp
-        if minTemp < averageTemp - self.threshold:
-            img = self.drawMinTemp(img, lrow, lcol, minTemp)
+        if min_temp < average_temp - self.threshold:
+            img = self.draw_min_temp(img, lrow, lcol, min_temp)
             
         # Update recording stats
-        if isRecording == True:
-            self.updateRecordingStats()
+        if is_recording:
+            self.update_recording_stats()
 
         return img
 
-    def drawTemp(self, img, temp):
+    def draw_temp(self, img, temp):
         """
         Draws the temperature onto the image.
         """
         cv2.putText(
             img,
             str(temp)+' C',
-            (int(self.scaledWidth/2)+10, int(self.scaledHeight/2)-10),
+            (int(self.scaled_width / 2) + 10, int(self.scaled_height / 2) - 10),
             self._font,
             0.45,
             (0, 0, 0),
@@ -106,7 +107,7 @@ class GuiController:
         cv2.putText(
             img,
             str(temp)+' C',
-            (int(self.scaledWidth/2)+10, int(self.scaledHeight/2)-10),
+            (int(self.scaled_width / 2) + 10, int(self.scaled_height / 2) - 10),
             self._font,
             0.45,
             (0, 255, 255),
@@ -115,39 +116,39 @@ class GuiController:
         
         return img
 
-    def drawCrosshairs(self, img):
+    def draw_crosshairs(self, img):
         """
         Draws crosshairs on the image.
         """
         cv2.line(
             img,
-            (int(self.scaledWidth/2),int(self.scaledHeight/2)+20),
-            (int(self.scaledWidth/2),int(self.scaledHeight/2)-20),
-            (255,255,255),
-            2) #vline
+            (int(self.scaled_width / 2), int(self.scaled_height / 2) + 20),
+            (int(self.scaled_width / 2), int(self.scaled_height / 2) - 20),
+            (255, 255, 255),
+            2)  # vline
         cv2.line(
             img,
-            (int(self.scaledWidth/2)+20,int(self.scaledHeight/2)),
-            (int(self.scaledWidth/2)-20,int(self.scaledHeight/2)),
-            (255,255,255),
-            2) #hline
+            (int(self.scaled_width / 2) + 20, int(self.scaled_height / 2)),
+            (int(self.scaled_width / 2) - 20, int(self.scaled_height / 2)),
+            (255, 255, 255),
+            2)  # hline
 
         cv2.line(
             img,
-            (int(self.scaledWidth/2),int(self.scaledHeight/2)+20),
-            (int(self.scaledWidth/2),int(self.scaledHeight/2)-20),
-            (0,0,0),
-            1) #vline
+            (int(self.scaled_width / 2), int(self.scaled_height / 2) + 20),
+            (int(self.scaled_width / 2), int(self.scaled_height / 2) - 20),
+            (0, 0, 0),
+            1)  # vline
         cv2.line(
             img,
-            (int(self.scaledWidth/2)+20,int(self.scaledHeight/2)),
-            (int(self.scaledWidth/2)-20,int(self.scaledHeight/2)),
-            (0,0,0),
-            1) #hline
+            (int(self.scaled_width / 2) + 20, int(self.scaled_height / 2)),
+            (int(self.scaled_width / 2) - 20, int(self.scaled_height / 2)),
+            (0, 0, 0),
+            1)  # hline
         
         return img
 
-    def drawHUD(self, img, averageTemp, isRecording):
+    def draw_hud(self, img, average_temp, is_recording):
         """
         Draws the HUD onto the image.
         """
@@ -156,13 +157,13 @@ class GuiController:
             img, 
             (0, 0),
             (160, 134),
-            (0,0,0),
+            (0, 0, 0),
             -1)
         
         # Put text in the box
         cv2.putText(
             img,
-            'Avg Temp: '+str(averageTemp)+' C',
+            'Avg Temp: ' + str(average_temp) + ' C',
             (10, 14),
             self._font,
             0.4,
@@ -192,7 +193,7 @@ class GuiController:
 
         cv2.putText(
             img,
-            'Blur: '+str(self.blurRadius)+' ', 
+            'Blur: ' + str(self.blur_radius) + ' ',
             (10, 56),
             self._font, 
             0.4,
@@ -230,10 +231,10 @@ class GuiController:
             1,
             cv2.LINE_AA)
 
-        if isRecording == False:
+        if not is_recording:
             cv2.putText(
                 img,
-                'Recording: '+str(isRecording),
+                'Recording: '+str(is_recording),
                 (10, 112),
                 self._font,
                 0.4,
@@ -243,7 +244,7 @@ class GuiController:
         else:
             cv2.putText(
                 img,
-                'Recording: '+self.recordingDuration,
+                'Recording: '+self.recording_duration,
                 (10, 112),
                 self._font,
                 0.4,
@@ -253,7 +254,7 @@ class GuiController:
             
         cv2.putText(
             img,
-            'Inverted: '+str(self.isInverted),
+            'Inverted: '+str(self.is_inverted),
             (10, 126),
             self._font,
             0.4,
@@ -263,7 +264,7 @@ class GuiController:
             
         return img
     
-    def drawMaxTemp(self, img, row: int, col: int, maxTemp):
+    def draw_max_temp(self, img, row: int, col: int, max_temp):
         """
         Draws the maximum temperature point on the image.
         """
@@ -272,29 +273,29 @@ class GuiController:
             img,
             (row*self.scale, col*self.scale),
             5,
-            (0,0,0),
+            (0, 0, 0),
             2)
         cv2.circle(
             img,
             (row*self.scale, col*self.scale),
             5,
-            (0,0,255),
+            (0, 0, 255),
             -1)
         
         # Draw max temp label(s)
         cv2.putText(
             img=img,
-            text=str(maxTemp)+' C', 
+            text=str(max_temp) + ' C',
             org=((row*self.scale)+10, (col*self.scale)+5),
             fontFace=self._font, 
             fontScale=0.45,
-            color=(0,0,0), 
+            color=(0, 0, 0), 
             thickness=2, 
             lineType=cv2.LINE_AA)
         
         cv2.putText(
             img=img,
-            text=str(maxTemp)+' C',
+            text=str(max_temp) + ' C',
             org=((row*self.scale)+10, (col*self.scale)+5),
             fontFace=self._font,
             fontScale=0.45,
@@ -304,28 +305,28 @@ class GuiController:
 
         return img
     
-    def drawMinTemp(self, img, row: int, col: int, minTemp):
+    def draw_min_temp(self, img, row: int, col: int, min_temp):
         """
         Draws the minimum temperature point on the image.
         """
         # Draw min temp circle
-        cv2.circle(img, (row*self.scale, col*self.scale), 5, (0,0,0), 2)
-        cv2.circle(img, (row*self.scale, col*self.scale), 5, (255,0,0), -1)
+        cv2.circle(img, (row*self.scale, col*self.scale), 5, (0, 0, 0), 2)
+        cv2.circle(img, (row*self.scale, col*self.scale), 5, (255, 0, 0), -1)
         
         # Draw min temp label(s)
         cv2.putText(
             img,
-            str(minTemp)+' C',
+            str(min_temp) + ' C',
             ((row*self.scale)+10,
              (col*self.scale)+5),
             self._font,
             0.45,
-            (0,0,0),
+            (0, 0, 0),
             2,
             cv2.LINE_AA)
         cv2.putText(
             img,
-            str(minTemp)+' C', 
+            str(min_temp) + ' C',
             ((row*self.scale)+10,
              (col*self.scale)+5),
             self._font,
@@ -336,7 +337,7 @@ class GuiController:
 
         return img
     
-    def applyColormap(self, img):
+    def apply_colormap(self, img):
         """
         Applies the selected colormap to the image data.
         """
@@ -367,7 +368,7 @@ class GuiController:
 
         return img
 
-    def applyEffects(self, imdata):
+    def apply_effects(self, imdata):
         """
         Applies effects (contrast, blur, upscaling, interpolation, etc.) to the image data.
         """
@@ -375,10 +376,10 @@ class GuiController:
         img = cv2.convertScaleAbs(imdata, alpha=self.contrast)
         
         # Bicubic interpolate, upscale and blur
-        img = cv2.resize(img, (self.scaledWidth,self.scaledHeight), interpolation=cv2.INTER_CUBIC) # Scale up!
+        img = cv2.resize(img, (self.scaled_width, self.scaled_height), interpolation=cv2.INTER_CUBIC)  # Scale up!
         
         # Blur
-        if self.blurRadius > 0:
-            img = cv2.blur(img,(self.blurRadius, self.blurRadius))
+        if self.blur_radius > 0:
+            img = cv2.blur(img, (self.blur_radius, self.blur_radius))
 
         return img

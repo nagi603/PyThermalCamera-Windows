@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Colormap(Enum):
     NONE = 0
     JET = 1

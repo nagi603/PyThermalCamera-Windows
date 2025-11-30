@@ -61,8 +61,8 @@ The current settings are displayed in a box at the top left of the screen (The H
 
 ## Dependencies
 - Python (v3.12.4)
-- python-opencv (v##.##.##)
-- numpy (v##.##.##)
+- opency-contrib-python (v4.12.0.88)
+- numpy (v2.2.6)
 
 ## Running the Program
 > **MAJOR NOTE**: If you have previously installed the official drivers/application from Topdon's website, ***UNINSTALL THEM COMPLETELY***. If you do not, your system will no longer recognize your camera as UVC-compatible.
