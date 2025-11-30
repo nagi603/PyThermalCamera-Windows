@@ -1,6 +1,7 @@
 import cv2
 
-def getDevices() -> list[int]:
+
+def get_devices() -> list[int]:
 	"""
 	Returns a list of video device indexes for opencv. 
 	Credit: Patrick Yeadon on StackOverflow - https://stackoverflow.com/questions/8044539/listing-available-devices-in-python-opencv
